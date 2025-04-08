@@ -1,0 +1,106 @@
+name: Android Build
+
+on:
+  push:
+    branches:
+      - "master"
+  workflow_dispatch:
+
+
+jobs:
+  build:
+    name: Build Android APK and AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Expo Prebuild
+        run: npx expo prebuild --platform android
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Increment Version Code and Set Version Name
+        run: |
+          NEW_VERSION_CODE=$(date +%s)
+          sed -i "s/versionCode [0-9]\+/versionCode $NEW_VERSION_CODE/" android/app/build.gradle
+
+          VERSION_NAME=$(date '+%Y-%m-%d %H:%M:%S')
+          sed -i "s/versionName \".*\"/versionName \"$VERSION_NAME\"/" android/app/build.gradle
+
+
+      - name: Remove debug signingConfig
+        run: sed -i '/signingConfig signingConfigs.debug/d' android/app/build.gradle && cat android/app/build.gradle
+
+      - name: Build APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Build AAB
+        run: |
+          cd android
+          ./gradlew bundleRelease
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_FILE }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+
+      - name: Sign AAB
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: android/app/build/outputs/bundle/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_FILE }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+
+      - name: Upload APK to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: |
+            android/app/build/outputs/apk/release/*unsigned-signed.apk
+          retention-days: 5
+
+      - name: Upload AAB to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          packageName: de.pp.cga
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          releaseName: ${{ github.ref_name }}
+          inAppUpdatePriority: 5
+          status: draft
