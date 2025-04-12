@@ -87,7 +87,11 @@ jobs:
           arch: x86_64
           ram-size: 2048M
           target: default
-          script: maestro test --format=junit --output=report.xml --no-ansi .maestro
+          script: |
+            adb install android/app/build/outputs/apk/release/app-release-unsigned.apk
+            maestro test --format=junit --output=report.xml --no-ansi .maestro
+        env:
+          MAESTRO_CLI_NO_ANALYTICS: true
 
       - name: Sign APK
         uses: r0adkll/sign-android-release@v1
