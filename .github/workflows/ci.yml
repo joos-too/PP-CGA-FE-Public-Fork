@@ -133,6 +133,3 @@ jobs:
           releaseName: ${{ github.ref_name }}
           inAppUpdatePriority: 5
           status: draft
-
-# TODO:
-# - make E2E Tests work (-> make repo public for larger runners?)
