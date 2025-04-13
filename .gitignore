@@ -40,5 +40,4 @@ yarn-error.*
 .idea/*
 !.idea/codeStyles*
 .vscode
-package-lock.json
 android

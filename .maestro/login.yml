@@ -1,0 +1,28 @@
+appId: de.pp.cga
+---
+- launchApp
+- assertVisible: login
+- assertVisible: Nutzername
+- assertVisible: Passwort
+- assertVisible: Anmelden
+- assertVisible: Als Gast anmelden
+- assertVisible: Jetzt registrieren
+
+- tapOn: Anmelden
+- assertVisible: Bitte Nutzername und Passwort angeben.
+
+- tapOn: Nutzername
+- inputText: Jan
+- tapOn: Passwort
+- inputText: Jan123
+- pressKey: Back
+
+- tapOn: Anmelden
+- assertVisible: Willkommen Jan
+
+- tapOn: J
+- tapOn: Abmelden
+
+- assertVisible: Login
+- tapOn: Als Gast anmelden
+- assertVisible: Kartenspiele
